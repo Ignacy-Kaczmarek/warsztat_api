@@ -37,7 +37,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<WarsztatdbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        new MySqlServerVersion(new Version(8, 4, 3))
+        new MySqlServerVersion(new Version(8, 0, 10))
     ));
 
 var app = builder.Build();
