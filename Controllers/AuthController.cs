@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
+using MySqlConnector;
 
 namespace Warsztat.Controllers
 {
@@ -155,5 +156,8 @@ namespace Warsztat.Controllers
         {
             return View();
         }*/
+
+    
+
     }
 }

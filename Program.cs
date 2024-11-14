@@ -37,13 +37,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<WarsztatdbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        new MySqlServerVersion(new Version(8, 0, 10))
+        new MySqlServerVersion(new Version(8, 4, 3))
     ));
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();

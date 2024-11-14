@@ -119,3 +119,4 @@ C:\Users\Ignacy\Desktop\Warsztat\bin\Debug\net8.0\Microsoft.IdentityModel.Protoc
 C:\Users\Ignacy\Desktop\Warsztat\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\Ignacy\Desktop\Warsztat\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\Ignacy\Desktop\Warsztat\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\Ignacy\Desktop\Warsztat\obj\Debug\net8.0\Warsztat.sourcelink.json
