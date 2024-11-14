@@ -1,0 +1,159 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Warsztat.Models;
+using BCrypt.Net;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Warsztat.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
+    {
+        private readonly WarsztatdbContext _context;
+        private readonly IConfiguration _configuration;
+        public AuthController(WarsztatdbContext context, IConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
+        }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] ClientRegisterDto clientDto)
+        {
+            // Sprawdź, czy email jest już używany
+            if (_context.Clients.Any(c => c.Email == clientDto.Email))
+            {
+                return BadRequest("Użytkownik o podanym adresie email już istnieje.");
+            }
+
+            // Zaszyfruj hasło metodą BCrypt
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(clientDto.Password);
+
+            // Utwórz nowy obiekt Client i przypisz zaszyfrowane hasło
+            var client = new Client
+            {
+                FirstName = clientDto.FirstName,
+                LastName = clientDto.LastName,
+                Address = clientDto.Address,
+                PhoneNumber = clientDto.PhoneNumber,
+                Email = clientDto.Email,
+                Password = hashedPassword
+            };
+
+            // Zapisz nowego klienta w bazie
+            _context.Clients.Add(client);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Rejestracja zakończona sukcesem" });
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] ClientLoginDto loginDto)
+        {
+            // Weryfikacja użytkownika
+            var client = _context.Clients.FirstOrDefault(c => c.Email == loginDto.Email);
+            if (client == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, client.Password))
+            {
+                return Unauthorized("Nieprawidłowy email lub hasło.");
+            }
+
+            // Generowanie tokena JWT
+            var token = GenerateJwtToken(client);
+
+            return Ok(new { Token = token });
+        }
+
+        // Metoda do generowania tokena JWT
+        private string GenerateJwtToken(Client client)
+        {
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, client.Id.ToString()),
+                new Claim(ClaimTypes.Name, client.Email),
+                new Claim("id", client.Id.ToString())
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddHours(1),
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        //aktualizacja danych
+        [Authorize]
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateClient(int id, [FromBody] ClientUpdateDto updateDto)
+        {
+            
+            var client = await _context.Clients.FindAsync(id);
+
+            if (client == null)
+            {
+                return NotFound("Klient o podanym ID nie istnieje.");
+            }
+            int userIdFromToken = int.Parse(User.FindFirst("id").Value);
+
+            if (userIdFromToken != id)
+            {
+                return Unauthorized("Nie masz uprawnień do tej operacji.");
+            }
+
+            // Aktualizacja pól (z wyłączeniem Email)
+            client.FirstName = updateDto.FirstName ?? client.FirstName;
+            client.LastName = updateDto.LastName ?? client.LastName;
+            client.Address = updateDto.Address ?? client.Address;
+            client.PhoneNumber = updateDto.PhoneNumber ?? client.PhoneNumber;
+
+            // Zaktualizuj hasło, jeśli podano nowe
+            if (!string.IsNullOrEmpty(updateDto.Password))
+            {
+                client.Password = BCrypt.Net.BCrypt.HashPassword(updateDto.Password);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Dane klienta zostały zaktualizowane." });
+        }
+
+        //usuwanie konta
+        [Authorize]
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteClient(int id)
+        {
+            var client = await _context.Clients.FindAsync(id);
+
+            if (client == null)
+            {
+                return NotFound("Klient o podanym ID nie istnieje.");
+            }
+            int userIdFromToken = int.Parse(User.FindFirst("id").Value);
+
+            if (userIdFromToken != id)
+            {
+                return Unauthorized("Nie masz uprawnień do tej operacji.");
+            }
+
+
+            _context.Clients.Remove(client);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Konto klienta zostało pomyślnie usunięte." });
+        }
+
+        /*public IActionResult Index()
+        {
+            return View();
+        }*/
+    }
+}
