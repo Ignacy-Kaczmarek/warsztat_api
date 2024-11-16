@@ -69,6 +69,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Warsztat.Controllers.EmployeeAuthController",
+    "Method": "Login",
+    "RelativePath": "api/EmployeeAuth/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "loginDto",
+        "Type": "Warsztat.Models.EmployeeLoginDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Warsztat.Controllers.VehicleController",
     "Method": "AddVehicle",
     "RelativePath": "api/Vehicle/add",
@@ -120,25 +136,5 @@
       }
     ],
     "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Warsztat.Controllers.WeatherForecastController",
-    "Method": "Get",
-    "RelativePath": "WeatherForecast",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": [
-      {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[Warsztat.WeatherForecast, Warsztat, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
   }
 ]

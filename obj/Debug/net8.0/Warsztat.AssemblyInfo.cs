@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Warsztat")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0067900f61ce770ed414be238ae06823cf4795b7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+28e9067388e8986736e6a6669a536c85a195b99c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Warsztat")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Warsztat")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

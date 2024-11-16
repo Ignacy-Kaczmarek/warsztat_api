@@ -152,11 +152,6 @@ namespace Warsztat.Controllers
             return Ok(new { Message = "Konto klienta zostało pomyślnie usunięte." });
         }
 
-        /*public IActionResult Index()
-        {
-            return View();
-        }*/
-
     
 
     }
