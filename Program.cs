@@ -123,7 +123,7 @@ builder.Services.AddSwaggerGen(c =>
 
 
 var app = builder.Build();
-app.UseCors("AllowAllOrigins");
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
@@ -133,6 +133,8 @@ if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowAllOrigins");
 
 app.UseAuthentication();
 
