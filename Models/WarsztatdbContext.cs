@@ -31,7 +31,8 @@ public partial class WarsztatdbContext : DbContext
     public virtual DbSet<Service> Services { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseMySql("name=ConnectionStrings:DefaultConnection", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.3-mysql"));
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseMySql("server=localhost;port=3305;database=warsztatdb;user=root;password=root", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.3-mysql"));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -196,7 +197,7 @@ public partial class WarsztatdbContext : DbContext
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Name).HasMaxLength(90);
             entity.Property(e => e.OrderId).HasColumnName("OrderID");
-            entity.Property(e => e.Price).HasPrecision(2);
+            entity.Property(e => e.Price).HasPrecision(6, 2);
             entity.Property(e => e.SerialNumber).HasMaxLength(45);
 
             entity.HasOne(d => d.Order).WithMany(p => p.Parts)
@@ -215,7 +216,7 @@ public partial class WarsztatdbContext : DbContext
 
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.Name).HasMaxLength(120);
-            entity.Property(e => e.Price).HasPrecision(2);
+            entity.Property(e => e.Price).HasPrecision(6, 2);
         });
 
         OnModelCreatingPartial(modelBuilder);

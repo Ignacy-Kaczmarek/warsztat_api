@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Warsztat.Models;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace Warsztat.Controllers
 {
@@ -95,6 +96,61 @@ namespace Warsztat.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Pojazd został usunięty pomyślnie." });
+        }
+
+        [HttpGet("my-vehicles")]
+        [Authorize(Roles = "Client")]
+        public IActionResult GetMyVehicles()
+        {
+            int clientId = int.Parse(User.FindFirst("id").Value);
+
+            var vehicles = _context.Cars
+                .Where(car => car.ClientId == clientId)
+                .Select(car => new
+                {
+                    car.Id,
+                    car.Brand,
+                    car.Model,
+                    car.ProductionYear,
+                    car.Vin,
+                    car.RegistrationNumber
+                })
+                .ToList();
+
+            return Ok(vehicles);
+        }
+
+        [HttpGet("{vehicleId}")]
+        public IActionResult GetVehicleById(int vehicleId)
+        {
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = int.Parse(User.FindFirst("id").Value);
+
+            var vehicle = _context.Cars
+                .Where(car => car.Id == vehicleId)
+                .Select(car => new
+                {
+                    car.Id,
+                    car.Brand,
+                    car.Model,
+                    car.ProductionYear,
+                    car.Vin,
+                    car.RegistrationNumber,
+                    Client = new { car.Client.Id, car.Client.FirstName, car.Client.LastName }
+                })
+                .FirstOrDefault();
+
+            if (vehicle == null)
+            {
+                return NotFound("Pojazd o podanym ID nie istnieje.");
+            }
+
+            // Klient może zobaczyć tylko swoje pojazdy
+            if (userRole == "Client" && vehicle.Client.Id != userId)
+            {
+                return Unauthorized("Nie masz uprawnień do tego pojazdu.");
+            }
+                return Ok(vehicle);
         }
 
 

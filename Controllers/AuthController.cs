@@ -75,21 +75,24 @@ namespace Warsztat.Controllers
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, client.Id.ToString()),
-                new Claim(ClaimTypes.Name, client.Email),
-                new Claim("id", client.Id.ToString())
-            };
+        new Claim("id", client.Id.ToString()),
+        new Claim("email", client.Email),
+        new Claim("role", "Client") // Dodajemy rolę Klienta
+    };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                claims: claims,
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
                 expires: DateTime.Now.AddHours(1),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
 
         //aktualizacja danych
         [Authorize]

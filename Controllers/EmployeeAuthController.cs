@@ -41,21 +41,25 @@ namespace Warsztat.Controllers
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, employee.Id.ToString()),
-                new Claim(ClaimTypes.Name, employee.Email),
-                new Claim("id", employee.Id.ToString()),
-                new Claim("role", employee.IsManager == 1 ? "Manager" : "Employee")
-            };
+        new Claim("id", employee.Id.ToString()),
+        new Claim("email", employee.Email),
+       new Claim(ClaimTypes.Role, employee.IsManager == 1 ? "Manager" : "Employee") // Różnicowanie ról
+    };
+            
+
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                claims: claims,
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
                 expires: DateTime.Now.AddHours(1),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
     }
 }

@@ -4,8 +4,11 @@ using Warsztat.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
@@ -17,14 +20,50 @@ builder.Services.AddAuthentication(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+        ValidateIssuer = true, // Sprawdzanie wydawcy
+        ValidateAudience = true, // Sprawdzanie odbiorcy
+        ValidateLifetime = true, // Sprawdzanie waønoúci tokenu
+        ValidateIssuerSigningKey = true, // Weryfikacja podpisu
+        ValidIssuer = builder.Configuration["Jwt:Issuer"], // Ustawienia wydawcy
+        ValidAudience = builder.Configuration["Jwt:Audience"], // Ustawienia odbiorcy
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+
     };
 });
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireClientRole", policy =>
+    {
+        policy.RequireAssertion(context =>
+        {
+            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            Console.WriteLine($"RequireClientRole - Found Role: {roleClaim}");
+            return roleClaim == "Client";
+        });
+    });
+
+    options.AddPolicy("RequireEmployeeRole", policy =>
+    {
+        policy.RequireAssertion(context =>
+        {
+            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            Console.WriteLine($"RequireEmployeeRole - Found Role: {roleClaim}");
+            return roleClaim == "Employee" || roleClaim == "Manager";
+        });
+    });
+
+    options.AddPolicy("RequireManagerRole", policy =>
+    {
+        policy.RequireAssertion(context =>
+        {
+            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            Console.WriteLine($"RequireManagerRole - Found Role: {roleClaim}");
+            return roleClaim == "Manager";
+        });
+    });
+});
 
 // Add services to the container.
 
@@ -40,13 +79,56 @@ builder.Services.AddDbContext<WarsztatdbContext>(options =>
         new MySqlServerVersion(new Version(8, 4, 3))
     ));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
+
+    // Konfiguracja JWT
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Wprowadü token JWT w formacie 'Bearer {token}'"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1"));
 }
 
 app.UseHttpsRedirection();
