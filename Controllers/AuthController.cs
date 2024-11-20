@@ -155,7 +155,32 @@ namespace Warsztat.Controllers
             return Ok(new { Message = "Konto klienta zostało pomyślnie usunięte." });
         }
 
-    
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetClientById(int id)
+        {
+            var client = await _context.Clients
+                .Select(c => new
+                {
+                    c.Id,
+                    c.FirstName,
+                    c.LastName,
+                    c.Address,
+                    c.PhoneNumber,
+                    c.Email,
+                    Password = c.Password // Wyświetlamy hasło w formie zaszyfrowanej
+                })
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (client == null)
+            {
+                return NotFound("Klient o podanym ID nie istnieje.");
+            }
+
+            return Ok(client);
+        }
+
+
+
 
     }
 }
