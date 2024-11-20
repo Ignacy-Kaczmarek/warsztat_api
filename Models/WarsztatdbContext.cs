@@ -30,7 +30,6 @@ public partial class WarsztatdbContext : DbContext
 
     public virtual DbSet<Service> Services { get; set; }
 
-   
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder

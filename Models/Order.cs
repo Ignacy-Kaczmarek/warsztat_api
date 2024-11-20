@@ -30,5 +30,4 @@ public partial class Order
     public virtual ICollection<Part> Parts { get; set; } = new List<Part>();
 
     public virtual ICollection<Service> Services { get; set; } = new List<Service>();
-
 }
