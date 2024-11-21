@@ -27,7 +27,7 @@ namespace Warsztat.Controllers
                 .Select(o => new
                 {
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddHours(o.Services.Sum(s => s.RepairTime))
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15)
                 })
                 .Where(slot => slot.StartDate < endDate && slot.EstimatedEndDate > startDate)
                 .ToList();
@@ -84,7 +84,7 @@ namespace Warsztat.Controllers
             {
                 ClientId = clientId,
                 StartDate = finalizeDto.PreferredStartDate,
-                Status = "Oczekuje",
+                Status = "oczekuje",
                 PaymentStatus = 0,
                 EmployeeId = null, // Pracownik będzie przypisany później
                 InvoiceLink = null,
@@ -104,12 +104,6 @@ namespace Warsztat.Controllers
                 EstimatedEndDate = estimatedEndDate
             });
         }
-
-
-
-
-
-
 
         [HttpGet("init")]
         [Authorize(Roles = "Client")]
@@ -159,7 +153,7 @@ namespace Warsztat.Controllers
                 {
                     o.Id,
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddHours(o.Services.Sum(s => s.RepairTime)),
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15),
                     o.Status,
                     o.ClientId,
                     TotalCost = o.Services.Sum(s => s.Price),
@@ -187,7 +181,7 @@ namespace Warsztat.Controllers
                 {
                     o.Id,
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddHours(o.Services.Sum(s => s.RepairTime)),
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15),
                     o.Status,
                     TotalCost = o.Services.Sum(s => s.Price),
                     Services = o.Services.Select(s => new
@@ -338,10 +332,110 @@ namespace Warsztat.Controllers
             return Ok(new { Message = "Rezerwacja została usunięta." });
         }
 
+        [HttpPatch("{orderId}/assign-employee")]
+        public async Task<IActionResult> AssignEmployeeToOrder(int orderId, int employeeId)
+        {
+            // Pobranie zlecenia z bazy danych
+            var order = await _context.Orders
+                .Include(o => o.Services)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                return NotFound($"Zlecenie o ID {orderId} nie istnieje.");
+            }
+
+            // Sprawdzenie, czy pracownik istnieje i nie jest kierownikiem
+            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Id == employeeId && e.IsManager == 0);
+            if (employee == null)
+            {
+                return BadRequest("Pracownik o podanym ID nie istnieje lub jest kierownikiem.");
+            }
+
+            // Sprawdzenie, czy pracownik jest dostępny w czasie trwania zlecenia
+            var startDate = order.StartDate;
+            var endDate = order.StartDate.AddMinutes(order.Services.Sum(s => s.RepairTime));
+
+            var isEmployeeBusy = await _context.Orders.AnyAsync(o =>
+                o.EmployeeId == employeeId &&
+                o.StartDate < endDate &&
+                o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)) > startDate);
+
+            if (isEmployeeBusy)
+            {
+                return Conflict("Wybrany pracownik jest zajęty w tym przedziale czasowym.");
+            }
+
+            // Przypisanie pracownika do zlecenia i zmiana statusu
+            order.EmployeeId = employeeId;
+            order.Status = "Potwierdzone";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Pracownik został przypisany do zlecenia.", OrderId = orderId, EmployeeId = employeeId });
+        }
+
+        [HttpGet("pending")]
+        [Authorize(Policy = "RequireManagerRole")]
+        public async Task<IActionResult> GetPendingReservations()
+        {
+            var pendingReservations = await _context.Orders
+                .Where(o => o.Status == "Oczekuje")
+                .OrderBy(o => o.StartDate)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.StartDate,
+                    o.Status,
+                    ClientName = o.Client.FirstName + " " + o.Client.LastName
+                })
+                .ToListAsync();
+
+            return Ok(pendingReservations);
+        }
+
+        [HttpGet("schedule")]
+        [Authorize(Policy = "RequireManagerRole")]
+        public async Task<IActionResult> GetSchedule()
+        {
+            var scheduleReservations = await _context.Orders
+                .Where(o => o.Status != "Ukończone" || o.PaymentStatus == 0)
+                .OrderBy(o => o.StartDate)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.StartDate,
+                    o.Status,
+                    PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
+                    EmployeeName = o.Employee.FirstName + " " + o.Employee.LastName
+                })
+                .ToListAsync();
+
+            return Ok(scheduleReservations);
+        }
+
+        [HttpGet("history")]
+        [Authorize(Policy = "RequireManagerRole")]
+        public async Task<IActionResult> GetCompletedAndPaidReservations()
+        {
+            var completedReservations = await _context.Orders
+                .Where(o => o.Status == "Ukończone" && o.PaymentStatus == 1)
+                .OrderBy(o => o.StartDate)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.StartDate,
+                    o.Status,
+                    PaymentStatus = "Opłacone",
+                    ClientName = o.Client.FirstName + " " + o.Client.LastName
+                })
+                .ToListAsync();
+
+            return Ok(completedReservations);
+        }
+
+
 
     }
-
-
-
 
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -43,8 +44,8 @@ namespace Warsztat.Controllers
             {
         new Claim("id", employee.Id.ToString()),
         new Claim("email", employee.Email),
-       new Claim(ClaimTypes.Role, employee.IsManager == 1 ? "Manager" : "Employee") // Różnicowanie ról
-    };
+        new Claim("role", employee.IsManager == 1 ? "Manager" : "Employee")
+            };
             
 
 
@@ -54,9 +55,15 @@ namespace Warsztat.Controllers
             var token = new JwtSecurityToken(
                 _configuration["Jwt:Issuer"],
                 _configuration["Jwt:Audience"],
-                claims,
+                claims: claims,
                 expires: DateTime.Now.AddHours(1),
                 signingCredentials: creds);
+            foreach (var role in User.Claims.Where(c => c.Type.Contains("role")))
+            {
+                Console.WriteLine($"Claim Type: {role.Type}, Value: {role.Value}");
+            }
+
+
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }

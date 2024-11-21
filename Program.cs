@@ -6,10 +6,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("role");
+JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
 builder.Services.AddAuthentication(options =>
@@ -20,16 +23,39 @@ builder.Services.AddAuthentication(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
+        RoleClaimType = "role",
         ValidateIssuer = true, // Sprawdzanie wydawcy
         ValidateAudience = true, // Sprawdzanie odbiorcy
         ValidateLifetime = true, // Sprawdzanie wa¿noœci tokenu
         ValidateIssuerSigningKey = true, // Weryfikacja podpisu
         ValidIssuer = builder.Configuration["Jwt:Issuer"], // Ustawienia wydawcy
         ValidAudience = builder.Configuration["Jwt:Audience"], // Ustawienia odbiorcy
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
-        RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+        
 
     };
+
+
+
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            // Przepisanie claimu role
+            var identity = context.Principal.Identity as ClaimsIdentity;
+            var roleClaim = context.Principal.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+
+            if (roleClaim != null)
+            {
+                identity?.AddClaim(new Claim("role", roleClaim.Value));
+                Console.WriteLine($"Custom RoleClaim added: {roleClaim.Value}");
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+
 });
 
 builder.Services.AddAuthorization(options =>
@@ -38,7 +64,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAssertion(context =>
         {
-            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            var roleClaim = context.User.FindFirst("role")?.Value;
             Console.WriteLine($"RequireClientRole - Found Role: {roleClaim}");
             return roleClaim == "Client";
         });
@@ -48,7 +74,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAssertion(context =>
         {
-            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            var roleClaim = context.User.FindFirst("role")?.Value;
             Console.WriteLine($"RequireEmployeeRole - Found Role: {roleClaim}");
             return roleClaim == "Employee" || roleClaim == "Manager";
         });
@@ -58,12 +84,20 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAssertion(context =>
         {
-            var roleClaim = context.User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+            var roleClaim = context.User.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
             Console.WriteLine($"RequireManagerRole - Found Role: {roleClaim}");
             return roleClaim == "Manager";
         });
     });
+
+
+
+
+
 });
+
+
+
 
 // Add services to the container.
 
