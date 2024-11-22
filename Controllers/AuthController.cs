@@ -179,6 +179,31 @@ namespace Warsztat.Controllers
             return Ok(client);
         }
 
+        [HttpPost("verify-password")]
+        [Authorize(Roles = "Client")]
+        public async Task<IActionResult> VerifyPassword([FromBody] VerifyPasswordDto verifyPasswordDto)
+        {
+            // Pobranie ID klienta z tokena JWT
+            int userIdFromToken = int.Parse(User.FindFirst("id").Value);
+
+            // Pobranie klienta z bazy danych
+            var client = await _context.Clients.FindAsync(userIdFromToken);
+            if (client == null)
+            {
+                return NotFound("Klient o podanym ID nie istnieje.");
+            }
+
+            // Weryfikacja hasła
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(verifyPasswordDto.Password, client.Password);
+            if (!isPasswordValid)
+            {
+                return Unauthorized(new { Message = "Nieprawidłowe hasło." });
+            }
+
+            return Ok(new { Message = "Hasło jest prawidłowe." });
+        }
+
+
 
 
 

@@ -6,6 +6,9 @@ using Warsztat.Models;
 
 namespace Warsztat.Controllers
 {
+    [ApiController]
+    [Route("api/Part")]
+    [Authorize]
     public class PartController : Controller
     {
         private readonly WarsztatdbContext _context;
