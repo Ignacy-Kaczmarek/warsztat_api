@@ -30,6 +30,7 @@ public partial class WarsztatdbContext : DbContext
 
     public virtual DbSet<Service> Services { get; set; }
 
+   
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -122,6 +123,7 @@ public partial class WarsztatdbContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("OrderID");
             entity.Property(e => e.PictureLink).HasMaxLength(70);
+            entity.Property(e => e.ProtocolLink).HasMaxLength(255);
 
             entity.HasOne(d => d.Order).WithOne(p => p.Handoverprotocol)
                 .HasForeignKey<Handoverprotocol>(d => d.OrderId)

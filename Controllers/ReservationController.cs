@@ -27,7 +27,7 @@ namespace Warsztat.Controllers
                 .Select(o => new
                 {
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15)
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15)
                 })
                 .Where(slot => slot.StartDate < endDate && slot.EstimatedEndDate > startDate)
                 .ToList();
@@ -107,7 +107,7 @@ namespace Warsztat.Controllers
 
         [HttpGet("init")]
         [Authorize(Roles = "Client")]
-        
+
         public IActionResult GetReservationData()
         {
             // Domyślne wartości dla `startDate` i `endDate`
@@ -153,7 +153,7 @@ namespace Warsztat.Controllers
                 {
                     o.Id,
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15),
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
                     o.ClientId,
                     TotalCost = o.Services.Sum(s => s.Price),
@@ -181,7 +181,7 @@ namespace Warsztat.Controllers
                 {
                     o.Id,
                     o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime)+15),
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
                     TotalCost = o.Services.Sum(s => s.Price),
                     Services = o.Services.Select(s => new
@@ -198,32 +198,72 @@ namespace Warsztat.Controllers
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetOrderById(int id)
+        public async Task<IActionResult> GetOrderById(int id)
         {
             var userId = int.Parse(User.FindFirst("id").Value);
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
-
-            // Pobranie zgłoszenia z bazy
-            var order = _context.Orders
+            // Pobranie szczegółów zlecenia z bazy danych
+            var orderDetails = await _context.Orders
                 .Where(o => o.Id == id)
                 .Select(o => new
                 {
                     o.Id,
                     o.StartDate,
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
-                    o.Client.FirstName,
-                    o.Client.LastName,
-                    ClientId = o.Client.Id,
-                    Services = o.Services.Select(s => new { s.Name, s.Price, s.RepairTime }),
-                    TotalCost = o.Services.Sum(s => s.Price),
-                    TotalTimeInMinutes = o.Services.Sum(s => s.RepairTime) + 15,
-                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15)
+                    PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
+                    o.Comment,
+                    Vehicle = _context.Cars
+                        .Where(car => car.ClientId == o.ClientId)
+                        .Select(car => new
+                        {
+                            car.Id,
+                            car.Brand,
+                            car.Model,
+                            car.ProductionYear,
+                            car.Vin,
+                            car.RegistrationNumber
+                        })
+                        .FirstOrDefault(),
+                    Client = new
+                    {
+                        o.Client.Id,
+                        o.Client.FirstName,
+                        o.Client.LastName,
+                        o.Client.PhoneNumber
+                    },
+                    Employee = o.Employee != null
+                        ? new
+                        {
+                            o.Employee.Id,
+                            o.Employee.FirstName,
+                            o.Employee.LastName
+                        }
+                        : null,
+                    Services = o.Services.Select(s => new
+                    {
+                        s.Id,
+                        s.Name,
+                        s.Price,
+                        s.RepairTime
+                    }).ToList(),
+                    Parts = o.Parts.Select(p => new
+                    {
+                        p.Id,
+                        p.Name,
+                        p.SerialNumber,
+                        p.Quantity,
+                        p.Price
+                    }).ToList(),
+                    TotalPartsCost = o.Parts.Sum(p => p.Price * p.Quantity),
+                    TotalServicesCost = o.Services.Sum(s => s.Price),
+                    TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price)
                 })
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
             // Jeśli zlecenie nie istnieje, zwróć 404
-            if (order == null)
+            if (orderDetails == null)
             {
                 return NotFound($"Zlecenie o ID {id} nie istnieje.");
             }
@@ -232,17 +272,84 @@ namespace Warsztat.Controllers
             if (userRole == "Employee" || userRole == "Manager")
             {
                 // Pracownik i kierownik mają dostęp bez dodatkowej weryfikacji
-                return Ok(order);
+                return Ok(orderDetails);
             }
-            else if (userRole == "Client" && order.ClientId == userId)
+            else if (userRole == "Client" && orderDetails.Client.Id == userId)
             {
                 // Klient ma dostęp tylko do swoich zleceń
-                return Ok(order);
+                return Ok(orderDetails);
             }
 
             // W innych przypadkach brak dostępu
             return Unauthorized("Nie masz uprawnień do tego zlecenia.");
         }
+
+        [HttpGet("{id}/invoice")]
+        [Authorize(Roles = "Client,Employee,Manager")]
+        public async Task<IActionResult> GetInvoiceLink(int id)
+        {
+            var order = await _context.Orders
+                .Where(o => o.Id == id)
+                .Select(o => new { o.InvoiceLink, o.ClientId, o.EmployeeId })
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                return NotFound($"Zlecenie o ID {id} nie istnieje.");
+            }
+
+            var userId = int.Parse(User.FindFirst("id").Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Autoryzacja
+            if (userRole == "Client" && order.ClientId != userId)
+            {
+                return Unauthorized("Nie masz uprawnień do tej faktury.");
+            }
+
+            if (userRole == "Employee" && order.EmployeeId != userId)
+            {
+                return Unauthorized("Nie masz uprawnień do tej faktury.");
+            }
+
+            return Ok(new { InvoiceLink = order.InvoiceLink });
+        }
+
+        [HttpGet("{id}/protocol")]
+        [Authorize(Roles = "Client,Employee,Manager")]
+        public async Task<IActionResult> GetProtocolLink(int id)
+        {
+            var order = await _context.Orders
+                .Where(o => o.Id == id)
+                .Select(o => new { o.Handoverprotocol.ProtocolLink, o.ClientId, o.EmployeeId })
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                return NotFound($"Zlecenie o ID {id} nie istnieje.");
+            }
+
+            var userId = int.Parse(User.FindFirst("id").Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Autoryzacja
+            if (userRole == "Client" && order.ClientId != userId)
+            {
+                return Unauthorized("Nie masz uprawnień do tego protokołu.");
+            }
+
+            if (userRole == "Employee" && order.EmployeeId != userId)
+            {
+                return Unauthorized("Nie masz uprawnień do tego protokołu.");
+            }
+
+            return Ok(new { ProtocolLink = order.ProtocolLink });
+        }
+
+
+
+
+
 
         [HttpPatch("{id}/update")]
         [Authorize(Policy = "RequireEmployeeRole")]

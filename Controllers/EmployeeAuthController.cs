@@ -56,7 +56,7 @@ namespace Warsztat.Controllers
                 _configuration["Jwt:Issuer"],
                 _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(1),
+                expires: DateTime.Now.AddHours(10),
                 signingCredentials: creds);
             foreach (var role in User.Claims.Where(c => c.Type.Contains("role")))
             {

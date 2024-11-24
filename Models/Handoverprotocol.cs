@@ -11,5 +11,7 @@ public partial class Handoverprotocol
 
     public string? PictureLink { get; set; }
 
+    public string? ProtocolLink { get; set; }
+
     public virtual Order Order { get; set; } = null!;
 }
