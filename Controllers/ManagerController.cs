@@ -58,6 +58,38 @@ namespace Warsztat.Controllers
             return Ok(employeeReservations);
         }
 
+        [HttpPatch("{orderId}/mark-as-paid")]
+        [Authorize(Policy = "RequireManagerRole")]
+        public async Task<IActionResult> MarkOrderAsPaid(int orderId)
+        {
+            // Znajdź zlecenie na podstawie ID
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+
+            // Jeśli zlecenie nie istnieje, zwróć 404
+            if (order == null)
+            {
+                return NotFound($"Zlecenie o ID {orderId} nie istnieje.");
+            }
+
+            // Sprawdź, czy zlecenie jest już oznaczone jako opłacone
+            if (order.PaymentStatus == 1)
+            {
+                return BadRequest($"Zlecenie o ID {orderId} jest już oznaczone jako opłacone.");
+            }
+
+            // Ustaw status płatności na "Opłacone"
+            order.PaymentStatus = 1;
+
+            // Zapisz zmiany w bazie danych
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = $"Zlecenie o ID {orderId} zostało oznaczone jako opłacone."
+            });
+        }
+
+
 
     }
 }

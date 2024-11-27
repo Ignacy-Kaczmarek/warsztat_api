@@ -87,7 +87,7 @@ namespace Warsztat.Controllers
                 _configuration["Jwt:Issuer"],
                 _configuration["Jwt:Audience"],
                 claims,
-                expires: DateTime.Now.AddHours(10),
+                expires: DateTime.Now.AddHours(2000),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

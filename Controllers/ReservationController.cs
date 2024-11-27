@@ -169,6 +169,79 @@ namespace Warsztat.Controllers
             return Ok(reservations);
         }
 
+        //[HttpGet("client")]
+        //[Authorize(Policy = "RequireClientRole")]
+        //public IActionResult GetClientReservations()
+        //{
+        //    int clientId = int.Parse(User.FindFirst("id").Value);
+
+        //    var reservations = _context.Orders
+        //        .Where(o => o.ClientId == clientId)
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            o.StartDate,
+        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
+        //            o.Status,
+        //            TotalCost = o.Services.Sum(s => s.Price),
+        //            Services = o.Services.Select(s => new
+        //            {
+        //                s.Id,
+        //                s.Name,
+        //                s.Price,
+        //                s.RepairTime
+        //            }).ToList()
+        //        })
+        //        .ToList();
+
+        //    return Ok(reservations);
+        //}
+
+        //[HttpGet("client")]
+        //[Authorize(Policy = "RequireClientRole")]
+        //public IActionResult GetClientReservations()
+        //{
+        //    int clientId = int.Parse(User.FindFirst("id").Value);
+
+        //    var reservations = _context.Orders
+        //        .Where(o => o.ClientId == clientId)
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            o.StartDate,
+        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
+        //            o.Status,
+        //            Vehicle = _context.Cars
+        //                .Where(car => car.ClientId == o.ClientId)
+        //                .Select(car => new
+        //                {
+        //                    car.Id,
+        //                    car.Brand,
+        //                    car.Model
+        //                })
+        //                .FirstOrDefault(),
+        //            Services = o.Services.Select(s => new
+        //            {
+        //                s.Id,
+        //                s.Name,
+        //                s.Price,
+        //                s.RepairTime
+        //            }).ToList(),
+        //            Parts = o.Parts.Select(p => new
+        //            {
+        //                p.Id,
+        //                p.Name,
+        //                p.SerialNumber,
+        //                p.Quantity,
+        //                p.Price
+        //            }).ToList(),
+        //            TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price)
+        //        })
+        //        .ToList();
+
+        //    return Ok(reservations);
+        //}
+
         [HttpGet("client")]
         [Authorize(Policy = "RequireClientRole")]
         public IActionResult GetClientReservations()
@@ -183,19 +256,47 @@ namespace Warsztat.Controllers
                     o.StartDate,
                     EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
-                    TotalCost = o.Services.Sum(s => s.Price),
+                    o.PaymentStatus, // Typ sbyte: 0 - Nieopłacone, 1 - Opłacone
+                    Vehicle = _context.Cars
+                        .Where(car => car.ClientId == o.ClientId)
+                        .Select(car => new
+                        {
+                            car.Id,
+                            car.Brand,
+                            car.Model
+                        })
+                        .FirstOrDefault(),
                     Services = o.Services.Select(s => new
                     {
                         s.Id,
                         s.Name,
                         s.Price,
                         s.RepairTime
-                    }).ToList()
+                    }).ToList(),
+                    Parts = o.Parts.Select(p => new
+                    {
+                        p.Id,
+                        p.Name,
+                        p.SerialNumber,
+                        p.Quantity,
+                        p.Price
+                    }).ToList(),
+                    TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price),
+                    RepairDurationMinutes = o.Services.Sum(s => s.RepairTime) + 15
                 })
+                .AsEnumerable()
+                .OrderBy(o =>
+                    o.Status != "Ukończone" || o.PaymentStatus == 0 ? o.StartDate : DateTime.MaxValue) // Najpierw najstarsze nieopłacone/nieukończone
+                .ThenByDescending(o =>
+                    o.Status == "Ukończone" && o.PaymentStatus == 1 ? o.StartDate : DateTime.MinValue) // Następnie najnowsze opłacone i ukończone
                 .ToList();
 
             return Ok(reservations);
         }
+
+
+
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderById(int id)

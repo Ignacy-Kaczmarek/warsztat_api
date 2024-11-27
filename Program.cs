@@ -161,14 +161,29 @@ var app = builder.Build();
 
 
 
+
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
+//if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
+//{
+//    app.UseStaticFiles();
+
+//    app.UseSwagger();
+//    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1"));
+//}
+
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseStaticFiles();
 
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1"));
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1");
+        c.InjectJavascript("/js/swagger-custom.js"); // £adowanie niestandardowego skryptu
+    });
 }
+
 
 app.UseHttpsRedirection();
 
