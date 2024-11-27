@@ -118,11 +118,12 @@ namespace Warsztat.Controllers
             var occupiedSlots = _context.Orders
                 .Where(o => o.StartDate < endDate && o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15) > startDate)
                 .Select(o => new
-                {
-                    o.StartDate,
-                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15)
-                })
-                .ToList();
+            {
+            o.StartDate,
+                 EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15)
+             })
+             .OrderBy(o => o.StartDate) // Sortowanie od najstarszego terminu
+             .ToList();
 
             // Pobranie listy usług
             var services = _context.Services
@@ -169,78 +170,6 @@ namespace Warsztat.Controllers
             return Ok(reservations);
         }
 
-        //[HttpGet("client")]
-        //[Authorize(Policy = "RequireClientRole")]
-        //public IActionResult GetClientReservations()
-        //{
-        //    int clientId = int.Parse(User.FindFirst("id").Value);
-
-        //    var reservations = _context.Orders
-        //        .Where(o => o.ClientId == clientId)
-        //        .Select(o => new
-        //        {
-        //            o.Id,
-        //            o.StartDate,
-        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
-        //            o.Status,
-        //            TotalCost = o.Services.Sum(s => s.Price),
-        //            Services = o.Services.Select(s => new
-        //            {
-        //                s.Id,
-        //                s.Name,
-        //                s.Price,
-        //                s.RepairTime
-        //            }).ToList()
-        //        })
-        //        .ToList();
-
-        //    return Ok(reservations);
-        //}
-
-        //[HttpGet("client")]
-        //[Authorize(Policy = "RequireClientRole")]
-        //public IActionResult GetClientReservations()
-        //{
-        //    int clientId = int.Parse(User.FindFirst("id").Value);
-
-        //    var reservations = _context.Orders
-        //        .Where(o => o.ClientId == clientId)
-        //        .Select(o => new
-        //        {
-        //            o.Id,
-        //            o.StartDate,
-        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
-        //            o.Status,
-        //            Vehicle = _context.Cars
-        //                .Where(car => car.ClientId == o.ClientId)
-        //                .Select(car => new
-        //                {
-        //                    car.Id,
-        //                    car.Brand,
-        //                    car.Model
-        //                })
-        //                .FirstOrDefault(),
-        //            Services = o.Services.Select(s => new
-        //            {
-        //                s.Id,
-        //                s.Name,
-        //                s.Price,
-        //                s.RepairTime
-        //            }).ToList(),
-        //            Parts = o.Parts.Select(p => new
-        //            {
-        //                p.Id,
-        //                p.Name,
-        //                p.SerialNumber,
-        //                p.Quantity,
-        //                p.Price
-        //            }).ToList(),
-        //            TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price)
-        //        })
-        //        .ToList();
-
-        //    return Ok(reservations);
-        //}
 
         [HttpGet("client")]
         [Authorize(Policy = "RequireClientRole")]
@@ -583,6 +512,25 @@ namespace Warsztat.Controllers
             return Ok(new { Message = "Pracownik został przypisany do zlecenia.", OrderId = orderId, EmployeeId = employeeId });
         }
 
+        //[HttpGet("pending")]
+        //[Authorize(Policy = "RequireManagerRole")]
+        //public async Task<IActionResult> GetPendingReservations()
+        //{
+        //    var pendingReservations = await _context.Orders
+        //        .Where(o => o.Status == "Oczekuje")
+        //        .OrderBy(o => o.StartDate)
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            o.StartDate,
+        //            o.Status,
+        //            ClientName = o.Client.FirstName + " " + o.Client.LastName
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(pendingReservations);
+        //}
+
         [HttpGet("pending")]
         [Authorize(Policy = "RequireManagerRole")]
         public async Task<IActionResult> GetPendingReservations()
@@ -594,6 +542,7 @@ namespace Warsztat.Controllers
                 {
                     o.Id,
                     o.StartDate,
+                    EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15), // Obliczenie daty zakończenia
                     o.Status,
                     ClientName = o.Client.FirstName + " " + o.Client.LastName
                 })
@@ -601,6 +550,7 @@ namespace Warsztat.Controllers
 
             return Ok(pendingReservations);
         }
+
 
         [HttpGet("schedule")]
         [Authorize(Policy = "RequireManagerRole")]

@@ -40,33 +40,24 @@
         // Obsługa kliknięcia przycisku
         button.onclick = () => {
             console.log(`Button clicked for role: ${role}`);
-            const authButton = document.querySelector('.authorize');
-            if (authButton) {
-                authButton.click(); // Kliknij przycisk "Authorize"
-                setTimeout(() => {
-                    const modal = document.querySelector('.modal-ux-content'); // Znajdź modal autoryzacji
-                    if (modal) {
-                        const authInput = modal.querySelector('input[type="text"]'); // Znajdź pole tekstowe w modalu
-                        if (authInput) {
-                            authInput.value = token; // Wstaw token
-                            authInput.dispatchEvent(new Event('input', { bubbles: true })); // Wyzwól zdarzenie wprowadzenia tekstu
 
-                            const confirmButton = modal.querySelector('.btn.modal-btn.auth.btn-primary'); // Przycisk "Authorize"
-                            if (confirmButton) {
-                                confirmButton.click(); // Kliknij "Authorize"
-                                console.log(`Token for ${role} successfully set!`);
-                            } else {
-                                console.error('Confirm button not found!');
-                            }
-                        } else {
-                            console.error('Authorization input not found in modal!');
-                        }
-                    } else {
-                        console.error('Authorization modal not found!');
-                    }
-                }, 500); // Daj czas na otwarcie modala
+            // Znajdź obiekt authActions i wymuś autoryzację
+            if (window.ui && window.ui.authActions && window.ui.authActions.authorize) {
+                window.ui.authActions.authorize({
+                    Bearer: {
+                        name: "Bearer",
+                        schema: {
+                            type: "http",
+                            in: "header",
+                            scheme: "bearer",
+                            bearerFormat: "JWT",
+                        },
+                        value: token,
+                    },
+                });
+                console.log(`Token for ${role} successfully set and authorized!`);
             } else {
-                console.error('Authorize button not found!');
+                console.error('Authorization function not found in Swagger UI!');
             }
         };
 
@@ -81,7 +72,7 @@
 // Poczekaj na załadowanie Swagger UI i uruchom funkcję
 const interval = setInterval(() => {
     const swaggerUI = document.querySelector('.swagger-ui');
-    if (swaggerUI) {
+    if (swaggerUI && window.ui) {
         clearInterval(interval);
         console.log('Swagger UI found');
         addRoleButtons();
