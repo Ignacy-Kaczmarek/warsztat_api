@@ -14,10 +14,12 @@ namespace Warsztat.Controllers
     public class ReservationController : ControllerBase
     {
         private readonly WarsztatdbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public ReservationController(WarsztatdbContext context)
+        public ReservationController(WarsztatdbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         [HttpGet("occupied-slots")]
@@ -222,97 +224,6 @@ namespace Warsztat.Controllers
         }
 
 
-
-
-
-
-        //[HttpGet("{id}")]
-        //public async Task<IActionResult> GetOrderById(int id)
-        //{
-        //    var userId = int.Parse(User.FindFirst("id").Value);
-        //    var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-
-        //    // Pobranie szczegółów zlecenia z bazy danych
-        //    var orderDetails = await _context.Orders
-        //        .Where(o => o.Id == id)
-        //        .Select(o => new
-        //        {
-        //            o.Id,
-        //            o.StartDate,
-        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
-        //            o.Status,
-        //            PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
-        //            o.Comment,
-        //            Vehicle = _context.Cars
-        //                .Where(car => car.ClientId == o.ClientId)
-        //                .Select(car => new
-        //                {
-        //                    car.Id,
-        //                    car.Brand,
-        //                    car.Model,
-        //                    car.ProductionYear,
-        //                    car.Vin,
-        //                    car.RegistrationNumber
-        //                })
-        //                .FirstOrDefault(),
-        //            Client = new
-        //            {
-        //                o.Client.Id,
-        //                o.Client.FirstName,
-        //                o.Client.LastName,
-        //                o.Client.PhoneNumber
-        //            },
-        //            Employee = o.Employee != null
-        //                ? new
-        //                {
-        //                    o.Employee.Id,
-        //                    o.Employee.FirstName,
-        //                    o.Employee.LastName
-        //                }
-        //                : null,
-        //            Services = o.Services.Select(s => new
-        //            {
-        //                s.Id,
-        //                s.Name,
-        //                s.Price,
-        //                s.RepairTime
-        //            }).ToList(),
-        //            Parts = o.Parts.Select(p => new
-        //            {
-        //                p.Id,
-        //                p.Name,
-        //                p.SerialNumber,
-        //                p.Quantity,
-        //                p.Price
-        //            }).ToList(),
-        //            TotalPartsCost = o.Parts.Sum(p => p.Price * p.Quantity),
-        //            TotalServicesCost = o.Services.Sum(s => s.Price),
-        //            TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price)
-        //        })
-        //        .FirstOrDefaultAsync();
-
-        //    // Jeśli zlecenie nie istnieje, zwróć 404
-        //    if (orderDetails == null)
-        //    {
-        //        return NotFound($"Zlecenie o ID {id} nie istnieje.");
-        //    }
-
-        //    // Logika autoryzacji dostępu
-        //    if (userRole == "Employee" || userRole == "Manager")
-        //    {
-        //        // Pracownik i kierownik mają dostęp bez dodatkowej weryfikacji
-        //        return Ok(orderDetails);
-        //    }
-        //    else if (userRole == "Client" && orderDetails.Client.Id == userId)
-        //    {
-        //        // Klient ma dostęp tylko do swoich zleceń
-        //        return Ok(orderDetails);
-        //    }
-
-        //    // W innych przypadkach brak dostępu
-        //    return Unauthorized("Nie masz uprawnień do tego zlecenia.");
-        //}
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderById(int id)
         {
@@ -400,9 +311,40 @@ namespace Warsztat.Controllers
 
 
 
+        //[HttpGet("{id}/invoice")]
+        //[Authorize(Roles = "Client,Employee,Manager")]
+        //public async Task<IActionResult> GetInvoiceLink(int id)
+        //{
+        //    var order = await _context.Orders
+        //        .Where(o => o.Id == id)
+        //        .Select(o => new { o.InvoiceLink, o.ClientId, o.EmployeeId })
+        //        .FirstOrDefaultAsync();
+
+        //    if (order == null)
+        //    {
+        //        return NotFound($"Zlecenie o ID {id} nie istnieje.");
+        //    }
+
+        //    var userId = int.Parse(User.FindFirst("id").Value);
+        //    var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        //    // Autoryzacja
+        //    if (userRole == "Client" && order.ClientId != userId)
+        //    {
+        //        return Unauthorized("Nie masz uprawnień do tej faktury.");
+        //    }
+
+        //    if (userRole == "Employee" && order.EmployeeId != userId)
+        //    {
+        //        return Unauthorized("Nie masz uprawnień do tej faktury.");
+        //    }
+
+        //    return Ok(new { InvoiceLink = order.InvoiceLink });
+        //}
+
         [HttpGet("{id}/invoice")]
         [Authorize(Roles = "Client,Employee,Manager")]
-        public async Task<IActionResult> GetInvoiceLink(int id)
+        public async Task<IActionResult> GetInvoiceFile(int id)
         {
             var order = await _context.Orders
                 .Where(o => o.Id == id)
@@ -428,12 +370,58 @@ namespace Warsztat.Controllers
                 return Unauthorized("Nie masz uprawnień do tej faktury.");
             }
 
-            return Ok(new { InvoiceLink = order.InvoiceLink });
+            // Pobierz pełną ścieżkę do pliku faktury
+            var filePath = Path.Combine(_environment.WebRootPath, order.InvoiceLink.TrimStart('/'));
+
+            // Sprawdź, czy plik istnieje
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound("Plik faktury nie został znaleziony.");
+            }
+
+            // Odczytaj zawartość pliku
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var fileName = Path.GetFileName(filePath);
+
+            // Zwróć plik jako odpowiedź
+            return File(fileBytes, "application/pdf", fileName);
         }
+
+
+        //[HttpGet("{id}/protocol")]
+        //[Authorize(Roles = "Client,Employee,Manager")]
+        //public async Task<IActionResult> GetProtocolLink(int id)
+        //{
+        //    var order = await _context.Orders
+        //        .Where(o => o.Id == id)
+        //        .Select(o => new { o.Handoverprotocol.ProtocolLink, o.ClientId, o.EmployeeId })
+        //        .FirstOrDefaultAsync();
+
+        //    if (order == null)
+        //    {
+        //        return NotFound($"Zlecenie o ID {id} nie istnieje.");
+        //    }
+
+        //    var userId = int.Parse(User.FindFirst("id").Value);
+        //    var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        //    // Autoryzacja
+        //    if (userRole == "Client" && order.ClientId != userId)
+        //    {
+        //        return Unauthorized("Nie masz uprawnień do tego protokołu.");
+        //    }
+
+        //    if (userRole == "Employee" && order.EmployeeId != userId)
+        //    {
+        //        return Unauthorized("Nie masz uprawnień do tego protokołu.");
+        //    }
+
+        //    return Ok(new { ProtocolLink = order.ProtocolLink });
+        //}
 
         [HttpGet("{id}/protocol")]
         [Authorize(Roles = "Client,Employee,Manager")]
-        public async Task<IActionResult> GetProtocolLink(int id)
+        public async Task<IActionResult> GetProtocolFile(int id)
         {
             var order = await _context.Orders
                 .Where(o => o.Id == id)
@@ -459,8 +447,23 @@ namespace Warsztat.Controllers
                 return Unauthorized("Nie masz uprawnień do tego protokołu.");
             }
 
-            return Ok(new { ProtocolLink = order.ProtocolLink });
+            // Pobierz pełną ścieżkę do pliku
+            var filePath = Path.Combine(_environment.WebRootPath, order.ProtocolLink.TrimStart('/'));
+
+            // Sprawdź, czy plik istnieje
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound("Plik protokołu nie został znaleziony.");
+            }
+
+            // Odczytaj zawartość pliku
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var fileName = Path.GetFileName(filePath);
+
+            // Zwróć plik jako odpowiedź
+            return File(fileBytes, "application/pdf", fileName);
         }
+
 
 
 
