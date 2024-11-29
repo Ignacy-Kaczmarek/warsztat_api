@@ -143,12 +143,20 @@ public partial class WarsztatdbContext : DbContext
 
             entity.HasIndex(e => e.Id, "ID_UNIQUE").IsUnique();
 
+            entity.HasIndex(e => e.CarId, "fkOrder_CarID");
+
             entity.Property(e => e.Id).HasColumnName("ID");
+            entity.Property(e => e.CarId).HasColumnName("CarID");
             entity.Property(e => e.ClientId).HasColumnName("ClientID");
             entity.Property(e => e.EmployeeId).HasColumnName("EmployeeID");
             entity.Property(e => e.InvoiceLink).HasMaxLength(45);
             entity.Property(e => e.StartDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(45);
+
+            entity.HasOne(d => d.Car).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.CarId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fkOrder_CarID");
 
             entity.HasOne(d => d.Client).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.ClientId)

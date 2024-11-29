@@ -20,4 +20,6 @@ public partial class Car
     public int ClientId { get; set; }
 
     public virtual Client Client { get; set; } = null!;
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

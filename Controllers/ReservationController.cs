@@ -35,7 +35,6 @@ namespace Warsztat.Controllers
             return Ok(occupiedSlots);
         }
 
-
         [HttpPost("finalize")]
         [Authorize(Roles = "Client")]
         public async Task<IActionResult> FinalizeReservation([FromBody] ReservationFinalizeDto finalizeDto)
@@ -44,16 +43,16 @@ namespace Warsztat.Controllers
             int clientId = int.Parse(User.FindFirst("id").Value);
 
             // Sprawdzenie, czy pojazd należy do klienta
-            var car = _context.Cars.FirstOrDefault(c => c.Id == finalizeDto.CarId && c.ClientId == clientId);
+            var car = await _context.Cars.FirstOrDefaultAsync(c => c.Id == finalizeDto.CarId && c.ClientId == clientId);
             if (car == null)
             {
                 return Unauthorized("Nie masz uprawnień do tego pojazdu.");
             }
 
             // Pobranie usług z bazy danych
-            var services = _context.Services
+            var services = await _context.Services
                 .Where(s => finalizeDto.ServiceIds.Contains(s.Id))
-                .ToList();
+                .ToListAsync();
 
             if (services.Count != finalizeDto.ServiceIds.Count)
             {
@@ -83,6 +82,7 @@ namespace Warsztat.Controllers
             var order = new Order
             {
                 ClientId = clientId,
+                CarId = finalizeDto.CarId, // Powiązanie z konkretnym samochodem
                 StartDate = finalizeDto.PreferredStartDate,
                 Status = "oczekuje",
                 PaymentStatus = 0,
@@ -104,6 +104,7 @@ namespace Warsztat.Controllers
                 EstimatedEndDate = estimatedEndDate
             });
         }
+
 
         [HttpGet("init")]
         [Authorize(Roles = "Client")]
@@ -186,15 +187,12 @@ namespace Warsztat.Controllers
                     EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
                     o.PaymentStatus, // Typ sbyte: 0 - Nieopłacone, 1 - Opłacone
-                    Vehicle = _context.Cars
-                        .Where(car => car.ClientId == o.ClientId)
-                        .Select(car => new
-                        {
-                            car.Id,
-                            car.Brand,
-                            car.Model
-                        })
-                        .FirstOrDefault(),
+                    Vehicle = new // Pobieranie danych pojazdu powiązanego z konkretnym zleceniem
+                    {
+                        o.Car.Id,
+                        o.Car.Brand,
+                        o.Car.Model
+                    },
                     Services = o.Services.Select(s => new
                     {
                         s.Id,
@@ -227,6 +225,94 @@ namespace Warsztat.Controllers
 
 
 
+
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetOrderById(int id)
+        //{
+        //    var userId = int.Parse(User.FindFirst("id").Value);
+        //    var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        //    // Pobranie szczegółów zlecenia z bazy danych
+        //    var orderDetails = await _context.Orders
+        //        .Where(o => o.Id == id)
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            o.StartDate,
+        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
+        //            o.Status,
+        //            PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
+        //            o.Comment,
+        //            Vehicle = _context.Cars
+        //                .Where(car => car.ClientId == o.ClientId)
+        //                .Select(car => new
+        //                {
+        //                    car.Id,
+        //                    car.Brand,
+        //                    car.Model,
+        //                    car.ProductionYear,
+        //                    car.Vin,
+        //                    car.RegistrationNumber
+        //                })
+        //                .FirstOrDefault(),
+        //            Client = new
+        //            {
+        //                o.Client.Id,
+        //                o.Client.FirstName,
+        //                o.Client.LastName,
+        //                o.Client.PhoneNumber
+        //            },
+        //            Employee = o.Employee != null
+        //                ? new
+        //                {
+        //                    o.Employee.Id,
+        //                    o.Employee.FirstName,
+        //                    o.Employee.LastName
+        //                }
+        //                : null,
+        //            Services = o.Services.Select(s => new
+        //            {
+        //                s.Id,
+        //                s.Name,
+        //                s.Price,
+        //                s.RepairTime
+        //            }).ToList(),
+        //            Parts = o.Parts.Select(p => new
+        //            {
+        //                p.Id,
+        //                p.Name,
+        //                p.SerialNumber,
+        //                p.Quantity,
+        //                p.Price
+        //            }).ToList(),
+        //            TotalPartsCost = o.Parts.Sum(p => p.Price * p.Quantity),
+        //            TotalServicesCost = o.Services.Sum(s => s.Price),
+        //            TotalOrderCost = o.Parts.Sum(p => p.Price * p.Quantity) + o.Services.Sum(s => s.Price)
+        //        })
+        //        .FirstOrDefaultAsync();
+
+        //    // Jeśli zlecenie nie istnieje, zwróć 404
+        //    if (orderDetails == null)
+        //    {
+        //        return NotFound($"Zlecenie o ID {id} nie istnieje.");
+        //    }
+
+        //    // Logika autoryzacji dostępu
+        //    if (userRole == "Employee" || userRole == "Manager")
+        //    {
+        //        // Pracownik i kierownik mają dostęp bez dodatkowej weryfikacji
+        //        return Ok(orderDetails);
+        //    }
+        //    else if (userRole == "Client" && orderDetails.Client.Id == userId)
+        //    {
+        //        // Klient ma dostęp tylko do swoich zleceń
+        //        return Ok(orderDetails);
+        //    }
+
+        //    // W innych przypadkach brak dostępu
+        //    return Unauthorized("Nie masz uprawnień do tego zlecenia.");
+        //}
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderById(int id)
         {
@@ -244,18 +330,15 @@ namespace Warsztat.Controllers
                     o.Status,
                     PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
                     o.Comment,
-                    Vehicle = _context.Cars
-                        .Where(car => car.ClientId == o.ClientId)
-                        .Select(car => new
-                        {
-                            car.Id,
-                            car.Brand,
-                            car.Model,
-                            car.ProductionYear,
-                            car.Vin,
-                            car.RegistrationNumber
-                        })
-                        .FirstOrDefault(),
+                    Vehicle = new // Pobieranie danych pojazdu powiązanego z zamówieniem
+                    {
+                        o.Car.Id,
+                        o.Car.Brand,
+                        o.Car.Model,
+                        o.Car.ProductionYear,
+                        o.Car.Vin,
+                        o.Car.RegistrationNumber
+                    },
                     Client = new
                     {
                         o.Client.Id,
@@ -313,6 +396,9 @@ namespace Warsztat.Controllers
             // W innych przypadkach brak dostępu
             return Unauthorized("Nie masz uprawnień do tego zlecenia.");
         }
+
+
+
 
         [HttpGet("{id}/invoice")]
         [Authorize(Roles = "Client,Employee,Manager")]

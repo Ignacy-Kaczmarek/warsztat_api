@@ -21,6 +21,10 @@ public partial class Order
 
     public int ClientId { get; set; }
 
+    public int CarId { get; set; }
+
+    public virtual Car Car { get; set; } = null!;
+
     public virtual Client Client { get; set; } = null!;
 
     public virtual Employee? Employee { get; set; }
