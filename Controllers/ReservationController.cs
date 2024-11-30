@@ -561,6 +561,11 @@ namespace Warsztat.Controllers
         [HttpPatch("{orderId}/assign-employee")]
         public async Task<IActionResult> AssignEmployeeToOrder(int orderId, int employeeId)
         {
+            // Walidacja: Sprawdzenie, czy `employeeId` zostało przekazane
+            if (employeeId <= 0)
+            {
+                return BadRequest("ID pracownika jest wymagane.");
+            }
             // Pobranie zlecenia z bazy danych
             var order = await _context.Orders
                 .Include(o => o.Services)
@@ -601,25 +606,6 @@ namespace Warsztat.Controllers
             return Ok(new { Message = "Pracownik został przypisany do zlecenia.", OrderId = orderId, EmployeeId = employeeId });
         }
 
-        //[HttpGet("pending")]
-        //[Authorize(Policy = "RequireManagerRole")]
-        //public async Task<IActionResult> GetPendingReservations()
-        //{
-        //    var pendingReservations = await _context.Orders
-        //        .Where(o => o.Status == "Oczekuje")
-        //        .OrderBy(o => o.StartDate)
-        //        .Select(o => new
-        //        {
-        //            o.Id,
-        //            o.StartDate,
-        //            o.Status,
-        //            ClientName = o.Client.FirstName + " " + o.Client.LastName
-        //        })
-        //        .ToListAsync();
-
-        //    return Ok(pendingReservations);
-        //}
-
         [HttpGet("pending")]
         [Authorize(Policy = "RequireManagerRole")]
         public async Task<IActionResult> GetPendingReservations()
@@ -639,6 +625,52 @@ namespace Warsztat.Controllers
 
             return Ok(pendingReservations);
         }
+
+        //oczekujące dużo danych
+        //[HttpGet("pending")]
+        //[Authorize(Policy = "RequireManagerRole")]
+        //public async Task<IActionResult> GetPendingReservations()
+        //{
+        //    var pendingReservations = await _context.Orders
+        //        .Where(o => o.Status == "Oczekuje")
+        //        .OrderBy(o => o.StartDate) // Sortowanie od najstarszego
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            Vehicle = new
+        //            {
+        //                o.Car.Brand,
+        //                o.Car.Model,
+        //                o.Car.ProductionYear,
+        //                o.Car.Vin
+        //            },
+        //            o.StartDate,
+        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15), // Obliczenie daty zakończenia
+        //            Services = o.Services.Select(s => new
+        //            {
+        //                s.Id,
+        //                s.Name,
+        //                s.Price,
+        //                s.RepairTime
+        //            }).ToList(),
+        //            o.Status,
+        //            PaymentStatus = o.PaymentStatus == 0 ? "Nieopłacone" : "Opłacone",
+        //            Client = new
+        //            {
+        //                Name = o.Client.FirstName + " " + o.Client.LastName
+        //            },
+        //            Employee = o.Employee != null
+        //                ? new
+        //                {
+        //                    Name = o.Employee.FirstName + " " + o.Employee.LastName
+        //                }
+        //                : null
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(pendingReservations);
+        //}
+
 
 
         [HttpGet("schedule")]

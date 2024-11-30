@@ -5,7 +5,7 @@ namespace Warsztat.Models
     public class AssignEmployeeDto : Controller
     {
        
-            public int EmployeeId { get; set; }
+            public int? EmployeeId { get; set; }
         
 
     }
