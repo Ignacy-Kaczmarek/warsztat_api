@@ -231,10 +231,8 @@ namespace Warsztat.Controllers
 
             return Ok(new { Comment = reservation.Comment ?? string.Empty });
         }
-
-        // 4. Dodanie/aktualizacja komentarza do zlecenia
         [HttpPost("reservations/{id}/comment")]
-        public async Task<IActionResult> UpdateReservationComment(int id, [FromBody] string comment)
+        public async Task<IActionResult> UpdateReservationComment(int id, [FromBody] UpdateReservationCommentDto request)
         {
             int employeeId = int.Parse(User.FindFirst("id").Value);
 
@@ -249,11 +247,12 @@ namespace Warsztat.Controllers
                 return Unauthorized("Nie masz uprawnień do edytowania tego zlecenia.");
             }
 
-            reservation.Comment = comment;
+            reservation.Comment = request.Comment;
 
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Komentarz został zaktualizowany." });
         }
+
     }
 }

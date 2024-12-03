@@ -27,10 +27,9 @@ namespace Warsztat.Controllers
             _context = context;
         }
 
-        // 1. Dodanie opisu protokołu
         [HttpPost("{orderId}/description")]
         [Authorize(Policy = "RequireEmployeeRole")]
-        public async Task<IActionResult> AddProtocolDescription(int orderId, [FromBody] string description)
+        public async Task<IActionResult> AddProtocolDescription(int orderId, [FromBody] ProtocolDescriptionDto request)
         {
             var order = await _context.Orders.Include(o => o.Handoverprotocol).FirstOrDefaultAsync(o => o.Id == orderId);
 
@@ -44,11 +43,12 @@ namespace Warsztat.Controllers
                 order.Handoverprotocol = new Handoverprotocol { OrderId = orderId };
             }
 
-            order.Handoverprotocol.Description = description;
+            order.Handoverprotocol.Description = request.Description;
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Opis protokołu został dodany." });
         }
+
 
         // 2. Przesyłanie zdjęć do folderu
         [HttpPost("{orderId}/upload-photo")]
