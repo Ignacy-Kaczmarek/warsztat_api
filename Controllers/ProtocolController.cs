@@ -149,135 +149,6 @@ namespace Warsztat.Controllers
             });
         }
 
-        //[HttpPost("{orderId}/generate-pdf")]
-        //[Authorize(Policy = "RequireEmployeeRole")]
-        //public async Task<IActionResult> GeneratePdf(int orderId)
-        //{
-        //    var order = await _context.Orders
-        //        .Include(o => o.Client)
-        //        .Include(o => o.Employee)
-        //        .Include(o => o.Services)
-        //        .Include(o => o.Handoverprotocol)
-        //        .FirstOrDefaultAsync(o => o.Id == orderId);
-
-        //    if (order == null)
-        //    {
-        //        return NotFound("Zlecenie nie istnieje.");
-        //    }
-
-        //    var car = await _context.Cars
-        //        .FirstOrDefaultAsync(c => c.ClientId == order.ClientId);
-
-        //    string protocolDirectory = Path.Combine("wwwroot", "protocols", orderId.ToString());
-        //    Directory.CreateDirectory(protocolDirectory);
-
-        //    string pdfPath = Path.Combine(protocolDirectory, $"protocol_{orderId}.pdf");
-        //    string fontPathRegular = Path.Combine("wwwroot", "fonts", "ARIAL.ttf");
-        //    string fontPathBold = Path.Combine("wwwroot", "fonts", "ARIALBD.ttf");
-
-        //    if (System.IO.File.Exists(pdfPath))
-        //    {
-        //        System.IO.File.Delete(pdfPath);
-        //    }
-
-        //    var writer = new PdfWriter(pdfPath);
-        //    var pdf = new PdfDocument(writer);
-        //    var document = new Document(pdf);
-
-        //    var regularFont = PdfFontFactory.CreateFont(fontPathRegular, PdfEncodings.IDENTITY_H);
-        //    var boldFont = PdfFontFactory.CreateFont(fontPathBold, PdfEncodings.IDENTITY_H);
-
-        //    document.SetFont(regularFont);
-        //    document.SetFontSize(12);
-
-        //    // Tytuł dokumentu
-        //    document.Add(new Paragraph("Protokół zdania pojazdu")
-        //        .SetFont(boldFont)
-        //        .SetFontSize(16)
-        //        .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER)
-        //        .SetMarginBottom(20));
-
-        //    // Szczegóły zlecenia
-        //    AddDetail(document, "Zlecenie ID:", order.Id.ToString(), boldFont, regularFont);
-        //    AddDetail(document, "Klient:", $"{order.Client.FirstName} {order.Client.LastName}", boldFont, regularFont);
-
-        //    if (car != null)
-        //    {
-        //        AddDetail(document, "Samochód:", $"{car.Brand} {car.Model}, {car.ProductionYear}", boldFont, regularFont);
-        //        AddDetail(document, "VIN:", car.Vin, boldFont, regularFont);
-        //        AddDetail(document, "Numer rejestracyjny:", car.RegistrationNumber, boldFont, regularFont);
-        //    }
-        //    else
-        //    {
-        //        AddDetail(document, "Samochód:", "Brak danych", boldFont, regularFont);
-        //        AddDetail(document, "VIN:", "Brak", boldFont, regularFont);
-        //        AddDetail(document, "Numer rejestracyjny:", "Brak", boldFont, regularFont);
-        //    }
-
-        //    AddDetail(document, "Opis stanu pojazdu:", order.Handoverprotocol?.Description ?? "Brak opisu", boldFont, regularFont);
-        //    AddDetail(document, "Pracownik odpowiedzialny:", $"{order.Employee?.FirstName} {order.Employee?.LastName}", boldFont, regularFont);
-
-        //    document.Add(new Paragraph("Lista usług:").SetFont(boldFont).SetFontSize(14).SetMarginTop(20));
-        //    foreach (var service in order.Services)
-        //    {
-        //        document.Add(new Paragraph($"- {service.Name}").SetMarginLeft(10));
-        //    }
-
-        //    // Dodawanie zdjęć pojazdu
-        //    document.Add(new Paragraph("Zdjęcia pojazdu:").SetFont(boldFont).SetFontSize(14).SetMarginTop(20));
-
-        //    string imageFolderPath = Path.Combine("wwwroot", "protocols", orderId.ToString());
-        //    if (Directory.Exists(imageFolderPath))
-        //    {
-        //        var imageFiles = Directory.GetFiles(imageFolderPath)
-        //            .Where(file => file.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-        //                           file.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
-        //                           file.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-        //            .ToArray();
-
-        //        if (imageFiles.Length == 0)
-        //        {
-        //            document.Add(new Paragraph("Brak zdjęć pojazdu."));
-        //        }
-        //        else
-        //        {
-        //            foreach (var imageFile in imageFiles)
-        //            {
-        //                ImageData imageData = ImageDataFactory.Create(imageFile);
-        //                Image img = new Image(imageData);
-
-        //                // Skalowanie zdjęć, jeśli rozmiar przekracza 500 px
-        //                if (img.GetImageWidth() > 500 || img.GetImageHeight() > 500)
-        //                {
-        //                    img = img.ScaleToFit(500, 500);
-        //                }
-
-        //                document.Add(img.SetMarginBottom(10));
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        document.Add(new Paragraph("Brak zdjęć pojazdu."));
-        //    }
-
-        //    document.Close();
-
-        //    // Zapisanie ścieżki do bazy
-        //    order.Handoverprotocol.ProtocolLink = $"/protocols/{orderId}/protocol_{orderId}.pdf";
-        //    await _context.SaveChangesAsync();
-
-        //    return Ok(new { Message = "Protokół został wygenerowany.", ProtocolLink = order.Handoverprotocol.ProtocolLink });
-        //}
-
-        //private void AddDetail(Document document, string label, string value, PdfFont boldFont, PdfFont regularFont)
-        //{
-        //    document.Add(new Paragraph()
-        //        .Add(new Text(label).SetFont(boldFont))
-        //        .Add(new Text(" " + value).SetFont(regularFont))
-        //        .SetMarginBottom(5));
-        //}
-
         [HttpPost("{orderId}/generate-pdf")]
         [Authorize(Policy = "RequireEmployeeRole")]
         public async Task<IActionResult> GeneratePdf(int orderId)
@@ -287,6 +158,7 @@ namespace Warsztat.Controllers
                 .Include(o => o.Employee)
                 .Include(o => o.Services)
                 .Include(o => o.Handoverprotocol)
+                .Include(o => o.Car) // Uwzględnienie właściwości nawigacyjnej do samochodu
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
             if (order == null)
@@ -294,8 +166,8 @@ namespace Warsztat.Controllers
                 return NotFound("Zlecenie nie istnieje.");
             }
 
-            var car = await _context.Cars
-                .FirstOrDefaultAsync(c => c.ClientId == order.ClientId);
+            // Pobieramy samochód bezpośrednio z właściwości nawigacyjnej
+            var car = order.Car;
 
             string protocolDirectory = Path.Combine("wwwroot", "protocols", orderId.ToString());
             Directory.CreateDirectory(protocolDirectory);
@@ -386,11 +258,6 @@ namespace Warsztat.Controllers
                         // Dodanie zdjęcia do tabeli
                         Cell imageCell = new Cell().Add(img.SetAutoScale(true)).SetPadding(5);
                         table.AddCell(imageCell);
-
-                        //// Dodanie podpisu pod zdjęciem
-                        //Cell textCell = new Cell().Add(new Paragraph($"Zdjęcie {Array.IndexOf(imageFiles, imageFile) + 1}"))
-                        //                          .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER);
-                        //table.AddCell(textCell);
                     }
                     document.Add(table);
                 }
@@ -416,6 +283,7 @@ namespace Warsztat.Controllers
                 .Add(new Text(" " + value).SetFont(regularFont))
                 .SetMarginBottom(5));
         }
+
 
 
 

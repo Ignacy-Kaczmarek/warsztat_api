@@ -23,7 +23,49 @@ namespace Warsztat.Controllers
             _context = context;
         }
 
-        // 1. Pobieranie zleceń przypisanych do pracownika, które nie są ukończone
+        //// 1. Pobieranie zleceń przypisanych do pracownika, które nie są ukończone
+        //[HttpGet("reservations")]
+        //public async Task<IActionResult> GetEmployeeReservations()
+        //{
+        //    int employeeId = int.Parse(User.FindFirst("id").Value);
+
+        //    var reservations = await _context.Orders
+        //        .Where(o => o.EmployeeId == employeeId && o.Status != "Ukończone")
+        //        .OrderBy(o => o.StartDate)
+        //        .Select(o => new
+        //        {
+        //            o.Id,
+        //            StartDate = o.StartDate,
+        //            EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
+        //            o.Status,
+        //            Vehicle = _context.Cars
+        //                .Where(car => car.ClientId == o.ClientId)
+        //                .Select(car => new
+        //                {
+        //                    car.Id,
+        //                    car.Brand,
+        //                    car.Model,
+        //                    car.ProductionYear,
+        //                    car.Vin,
+        //                    car.RegistrationNumber
+        //                })
+        //                .FirstOrDefault(),
+        //            Client = new
+        //            {
+        //                o.Client.Id,
+        //                o.Client.FirstName,
+        //                o.Client.LastName
+        //            },
+        //            Tasks = o.Services.Select(s => new
+        //            {
+        //                s.Name
+        //            }).ToList()
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(reservations);
+        //}
+
         [HttpGet("reservations")]
         public async Task<IActionResult> GetEmployeeReservations()
         {
@@ -38,18 +80,15 @@ namespace Warsztat.Controllers
                     StartDate = o.StartDate,
                     EstimatedEndDate = o.StartDate.AddMinutes(o.Services.Sum(s => s.RepairTime) + 15),
                     o.Status,
-                    Vehicle = _context.Cars
-                        .Where(car => car.ClientId == o.ClientId)
-                        .Select(car => new
-                        {
-                            car.Id,
-                            car.Brand,
-                            car.Model,
-                            car.ProductionYear,
-                            car.Vin,
-                            car.RegistrationNumber
-                        })
-                        .FirstOrDefault(),
+                    Vehicle = new
+                    {
+                        o.Car.Id,
+                        o.Car.Brand,
+                        o.Car.Model,
+                        o.Car.ProductionYear,
+                        o.Car.Vin,
+                        o.Car.RegistrationNumber
+                    },
                     Client = new
                     {
                         o.Client.Id,
@@ -65,6 +104,7 @@ namespace Warsztat.Controllers
 
             return Ok(reservations);
         }
+
 
         // 2. Oznaczenie zlecenia jako "ukończone"
         [HttpPatch("reservations/{id}/complete")]
